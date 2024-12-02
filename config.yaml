@@ -1,0 +1,31 @@
+robot:
+  start_position: [0, 0, 0]
+  start_orientation: [0, 0, 0]
+  initial_joint_positions: [0, -0.5, 0.3, -1.0, 0.0, 1.0, 0.785]
+
+rope:
+  length: 0.5
+  num_segments: 15
+  segment_radius: 0.01
+  segment_mass: 0.05
+  start_position: [5, 0, 0]
+
+simulation:
+  gravity: [0, 0, -9.81]
+  time_step: 0.01
+  duration: 1000
+
+trajectory:
+  x_amplitude: 2.0
+  y_amplitude: 0.0
+  z_amplitude: 0.0
+  x_frequency: 0.5
+  y_frequency: 0.0
+  z_frequency: 0.0
+
+logging:
+  robot_log_path: "logs/robot_states_log.csv"
+  rope_log_path: "logs/rope_states_log.csv"
+
+output:
+  directory: "logs/"

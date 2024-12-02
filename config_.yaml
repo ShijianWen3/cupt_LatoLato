@@ -1,0 +1,21 @@
+
+rope:
+  length: 2.0
+  num_segments: 60
+  segment_radius: 0.01
+  segment_mass: 0.4
+  start_position: [0, 0, 4]
+
+simulation:
+  gravity: [0, 0, -9.81]
+  time_step: 0.01
+  duration: 1000
+
+trajectory:
+  x_amplitude: 2.0
+  y_amplitude: 0.0
+  z_amplitude: 0.0
+  x_frequency: 0.5
+  y_frequency: 0.0
+  z_frequency: 0.0
+
