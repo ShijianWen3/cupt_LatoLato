@@ -1,235 +1,107 @@
-import pybullet as p
-import pybullet_data
-import yaml
-import time
-import math
-from create_rope import create_rope
-# Load parameters from YAML file
-
-with open("/home/shijian/cupt/rope_control_pybullet-main/config/config.yaml", "r") as config_file:
-    config = yaml.safe_load(config_file)
-
-# Extract parameters from config
-rope_params = config["rope"]
-sim_params = config["simulation"]
-
-# Connect to PyBullet
-physicsClient = p.connect(p.GUI)
-
-# Set the additional search path for URDF files
-p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
-# Reset simulation and set gravity
-p.resetSimulation()
-p.setGravity(*sim_params["gravity"])
-
-# Load the ground plane
-planeId = p.loadURDF("plane.urdf")
-
-# Rope setup
-rope_length = rope_params["length"]
-num_segments = rope_params["num_segments"]
-segment_length = rope_length / num_segments
-segment_radius = rope_params["segment_radius"]
-segment_mass = rope_params["segment_mass"]
-rope_segments = []
-pivot_height = 4
-
-# Set a starting position for the first rope segment directly below but offset from the robot's end-effector
-# start_pos = rope_params["start_position"]
-# start_pos = [-rope_length/2,0,pivot_height]
-start_pos_1 = [0,0,pivot_height-rope_length]
-start_pos_2 = [0,0,0]
-# Create rope segments
-rope1 = create_rope(num_segments,start_pos_1, rope_params)
-# rope2 = create_rope(num_segments, start_pos_2, rope_params)
-start_point_1 = [-(rope_length-0.1), 0, 3.5]
-start_point_2 = [(rope_length-0.1), 0, 3.5]
-# 创建两个小球，分别在绳子的两端
-ball_radius = 0.05
-ball_mass = 5
-
-ball1 = p.createCollisionShape(p.GEOM_SPHERE, radius=ball_radius)
-ball2 = p.createCollisionShape(p.GEOM_SPHERE, radius=ball_radius)
-
-ball1_id = p.createMultiBody(
-    baseMass=ball_mass,
-    baseCollisionShapeIndex=ball1,
-    # basePosition=[0, 0, pivot_height-rope_length]
-    basePosition=[-rope_length, 0, pivot_height]
-
-)
-
-ball2_id = p.createMultiBody(
-    baseMass=ball_mass,
-    baseCollisionShapeIndex=ball2,
-    basePosition=[rope_length , 0, pivot_height]
-)
+from vpython import *
 
 
-pivot_id = p.createMultiBody(
-    baseMass=0,
-    baseCollisionShapeIndex=-1,
-    basePosition=[0, 0, pivot_height]
-)
+#畫面
+scene.width = scene.height = 500
+L = 0.5
+scene.range = 1.0*L
+scene.center = vector(0.5*L, -0.25*L, 0*L)
+#座標軸
+R = L/100
+d = 0.5*L
+xaxis = cylinder(pos=vec(0,0,0), axis=vec(d,0,0), radius=R, color=color.yellow)
+yaxis = cylinder(pos=vec(0,-L,0), axis=vec(0,3*d,0), radius=R, color=color.yellow)
+zaxis = cylinder(pos=vec(0,0,0), axis=vec(0,0,d), radius=0.1*R, color=color.yellow)
+#座標軸文字
+k = 1.1
+h= 0.1*L
+text(pos=xaxis.pos+k*xaxis.axis, text='x', height=h, align='center', billboard=True, emissive=True)
+text(pos=yaxis.pos+k*yaxis.axis, text='y', height=h, align='center', billboard=True, emissive=True)
+# text(pos=zaxis.pos+k*zaxis.axis, text='z', height=h, align='center', billboard=True, emissive=True)
 
-p1 = p.createMultiBody(
-    baseMass=0,
-    baseCollisionShapeIndex=-1,
-    basePosition=start_point_1
-)
-p2 = p.createMultiBody(
-    baseMass=0,
-    baseCollisionShapeIndex=-1,
-    basePosition=start_point_2
-)
+scene.camera.pos=vec(0,-0.3*L,1.5*L)
 
-
-
-
-
-# Attach the rope to the robot's end-effector
-
-p.createConstraint(
-    pivot_id,
-    -1,
-    rope1[-1],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-)
-
-c1 = p.createConstraint(
-    p1,
-    -1,
-    rope1[0],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-)
-
-rope2 = create_rope(num_segments,start_pos_1, rope_params)
-
-p.createConstraint(
-    pivot_id,
-    -1,
-    rope2[0],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-)
-c2 = p.createConstraint(
-    p2,
-    -1,
-    rope2[-1],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
-)
+#物體
+mass=0.2
+R=0.05
+ks=50000
+kball=2000
+Ls0=0.4
+velocity=vector(0,0,0)
+g=vector(0,-9.8,0)
 
 
-p.createConstraint(
-    ball1_id,
-    -1,
-    rope1[0],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [ball_radius, 0, -ball_radius],
-    [0, 0, 0],
-)
+ball=sphere(pos=vector(0,0,0),color=color.orange,radius=R,make_trail=True,trail_type='points',interval=2,retain=10)
+Pivot=sphere(pos=vector(0,0,0),color=color.green,radius=0.2*R)
+ball2=sphere(pos=vector(-ball.pos.x,ball.pos.y,ball.pos.z),color=color.orange,radius=R)
 
-p.createConstraint(
-    ball2_id,
-    -1,
-    rope2[-1],
-    -1,
-    p.JOINT_FIXED,
-    [0, 0, 0],
-    [-ball_radius, 0, -ball_radius],
-    [0, 0, 0],
-)
+ball_arrow = arrow(pos=ball.pos,axis=velocity,color=color.green,shaftwidth=0.02)
+string = cylinder(pos=vector(0,0,0), axis=ball.pos, radius=0.1*R)
+string2 = cylinder(pos=vector(0,0,0), axis=ball2.pos, radius=0.1*R)
 
+Lcurve = gcurve(color=color.red)
 
-# Simulation loop without dynamic motion to test the initial configuration
-t = 0
-dt = sim_params["time_step"]
-simulation_duration = sim_params["duration"]
-# p.setGravity(*[0,0,0])
+#初始角度
+angle0=10*(2*pi/360)
+ball.pos=Ls0*vec(sin(angle0),-cos(angle0),0)
 
-p.removeConstraint(c1)
-p.removeConstraint(c2)
+#運動
+periodT=2*pi*sqrt(Ls0/mag(g))
+#Pivot
+PivotA=0.2
+PivotW=2*(2*pi/periodT)*1.2
+
+Bresist=0.05
+
+delta_t=periodT/20000
 
 
+t=0
+while t<30*periodT:
+    rate(20000)
+
+    Pivot.pos.y=PivotA*sin(PivotW*t)
+    string.pos.y=Pivot.pos.y
+    string2.pos.y=Pivot.pos.y
+    Fg=mass*g
+
+    Fwire=-ks*(mag(ball.pos-Pivot.pos)-Ls0)*(ball.pos-Pivot.pos)/mag(ball.pos-Pivot.pos)
 
 
-# 设置空气密度和物体参数
-rho_air = 1.225  # 空气密度 (kg/m^3)
-drag_coefficient = 0.47  # 阻力系数 (假设是一个球体)
-object_area = math.pi * ball_radius**2  # 物体的迎风面积 (m^2)
+    Fresist =- Bresist*velocity
+    if (ball.pos.x-R)<0:
+        Fwall =- kball*(ball.pos.x-R)*vector(1,0,0)
+    else:
+        Fwall=vector(0,0,0)
 
+    force = Fg+Fwire+Fresist+Fwall
 
-start_time = time.time()
-oscillation_amplitude = 0.5  # 振幅
-oscillation_frequency = 0.5  # 振荡频率
-while t < simulation_duration:
-    t += dt
+    last_velocity=velocity
+    last_vtan=last_velocity-(last_velocity.dot(string.axis.norm()))*string.axis.norm()
+    velocity=velocity+force/mass*delta_t
+    vtan=velocity-(velocity.dot(string.axis.norm()))*string.axis.norm()
 
+    ball.pos=ball.pos+velocity*delta_t
+    ball2.pos=vector(-ball.pos.x,ball.pos.y,ball.pos.z)
+    string.axis=ball.pos-Pivot.pos
+    string2.axis=ball2.pos-Pivot.pos
+    ball_arrow.pos=ball.pos
+    ball_arrow.axis=velocity
 
-    # 获取物体的速度
-    velocity, angular_velocity = p.getBaseVelocity(ball1_id)
-    v = math.sqrt(velocity[0]**2 + velocity[1]**2 + velocity[2]**2)  # 物体的速度大小
+    angle=atan(-ball.pos.x/ball.pos.y)*180/pi
 
-    if v:
-        # 计算空气阻力
-        drag_force_magnitude = 0.5 * drag_coefficient * rho_air * object_area * v**2
+    if (last_vtan.dot(vtan)) < 0.0 and (ball.pos.x-R) > 0:
+        print(f"time={t}", "\t", f"angle={angle}")
+        Lcurve.plot(t,angle)
+    t += delta_t
 
-        # 计算空气阻力的方向，通常是速度方向的反向
-        drag_force = [-drag_force_magnitude * velocity[0] / v, 
-                    -drag_force_magnitude * velocity[1] / v, 
-                    -drag_force_magnitude * velocity[2] / v]
-        
+ball.color = color.green
 
-        # 应用空气阻力
-        p.applyExternalForce(ball1_id, linkIndex=-1, forceObj=drag_force, posObj=[0, 0, 0], flags=p.WORLD_FRAME)
-
-    # 获取物体的速度
-    velocity, angular_velocity = p.getBaseVelocity(ball2_id)
-    v = math.sqrt(velocity[0]**2 + velocity[1]**2 + velocity[2]**2)  # 物体的速度大小
-
-    if v:
-             # 计算空气阻力
-        drag_force_magnitude = 0.5 * drag_coefficient * rho_air * object_area * v**2
-
-        # 计算空气阻力的方向，通常是速度方向的反向
-        drag_force = [-drag_force_magnitude * velocity[0] / v, 
-                    -drag_force_magnitude * velocity[1] / v, 
-                    -drag_force_magnitude * velocity[2] / v]
-
-        # 应用空气阻力
-        p.applyExternalForce(ball2_id, linkIndex=-1, forceObj=drag_force, posObj=[0, 0, 0], flags=p.WORLD_FRAME)
-
+def test():
     
-    
-    # 计算支点的振荡位置
-    current_time = time.time() - start_time
-    oscillation = pivot_height+oscillation_amplitude * math.sin(2 * math.pi * oscillation_frequency * current_time)
-    
-    # 设置支点的位置
-    p.resetBasePositionAndOrientation(pivot_id, [0, 0, oscillation], [0, 0, 0, 1])
+if __name__ == '__main__':
 
-    
-    # Step the simulation
-    p.stepSimulation()
-    time.sleep(dt)
 
-# Disconnect from simulation
-p.disconnect()
+
+
+
